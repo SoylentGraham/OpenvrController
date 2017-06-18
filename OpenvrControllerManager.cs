@@ -35,12 +35,33 @@ public class OpenvrControllerFrame
 	public bool			AppButtonPressed;
 	public bool			AppButtonReleased;
 
+	public bool			GripButtonIsDown;
+	public bool			GripButtonPressed;
+	public bool			GripButtonReleased;
+
 	public bool IsKeyFrame()
 	{
 		return TriggerPressed || TriggerReleased ||
 			TouchpadPressed || TouchpadReleased ||
 			TouchpadClickPressed || TouchpadClickReleased ||
-			AppButtonPressed || AppButtonReleased;
+			AppButtonPressed || AppButtonReleased ||
+			GripButtonPressed || GripButtonReleased;
+	}
+
+	//	calculate the Pressed/Released values
+	public void CalculateDiff(OpenvrControllerFrame LastFrame)
+	{
+		SetDiff( ref TriggerPressed, ref TriggerReleased, TriggerIsDown, LastFrame!=null && LastFrame.TriggerIsDown );
+		SetDiff( ref TouchpadPressed, ref TouchpadReleased, TouchpadIsDown, LastFrame!=null && LastFrame.TouchpadIsDown );
+		SetDiff( ref TouchpadClickPressed, ref TouchpadClickReleased, TouchpadClickIsDown, LastFrame!=null && LastFrame.TouchpadClickIsDown );
+		SetDiff( ref AppButtonPressed, ref AppButtonReleased, AppButtonIsDown, LastFrame!=null && LastFrame.AppButtonIsDown );
+		SetDiff( ref GripButtonPressed, ref GripButtonReleased, GripButtonIsDown, LastFrame!=null && LastFrame.GripButtonIsDown );
+	}
+
+	void SetDiff(ref bool Pressed,ref bool Released,bool Down,bool LastDown)
+	{
+		Pressed = Down && !LastDown;
+		Released = !Down && LastDown;
 	}
 
 }
@@ -56,7 +77,8 @@ public class OpenvrControllerManager : MonoBehaviour {
 
 	public UnityEvent_OpenvrControllerFrames	OnUpdateAll;
 	public ETrackingUniverseOrigin				TrackingOrigin = ETrackingUniverseOrigin.TrackingUniverseStanding;
-	int											PeakControllers = 0;
+	List<OpenvrControllerFrame>					LastFrames;		
+	int											PeakControllers	{	get {	return LastFrames!=null ? LastFrames.Count : 0; }	}
 	CVRSystem									system = null;
 
 	//	from SteamVr
@@ -113,12 +135,19 @@ public class OpenvrControllerManager : MonoBehaviour {
 		Rotation = GetRotation(m);
 	}
 
-	OpenvrControllerFrame GetFrame(VRControllerState_t? pState,TrackedDevicePose_t? pPose)
+	static void SetButton(ulong State,EVRButtonId Button,ref bool Value)
+	{
+		var Down = State & (ulong)(1 << (int)Button);
+		Value = (Down!=0);
+	}
+
+	OpenvrControllerFrame GetFrame(VRControllerState_t? pState,TrackedDevicePose_t? pPose,OpenvrControllerFrame LastFrame)
 	{
 		var Frame = new OpenvrControllerFrame();
 
 		if ( !pState.HasValue || !pPose.HasValue )
 		{
+			//	if last frame is valid, get a "all-released" frame diff before we return null
 			Frame.Attached = false;
 			return Frame;
 		}
@@ -129,6 +158,22 @@ public class OpenvrControllerManager : MonoBehaviour {
 		Frame.Attached = true;
 		Frame.Tracking = Pose.bPoseIsValid;
 		RigidTransform( Pose.mDeviceToAbsoluteTracking, ref Frame.Position, ref Frame.Rotation );
+
+		SetButton( State.ulButtonPressed, EVRButtonId.k_EButton_ApplicationMenu, ref Frame.AppButtonIsDown );
+		SetButton( State.ulButtonPressed, EVRButtonId.k_EButton_Grip, ref Frame.GripButtonIsDown );
+		SetButton( State.ulButtonPressed, EVRButtonId.k_EButton_SteamVR_Touchpad, ref Frame.TouchpadClickIsDown );
+		SetButton( State.ulButtonPressed, EVRButtonId.k_EButton_SteamVR_Trigger, ref Frame.TriggerIsDown );
+
+		SetButton( State.ulButtonTouched, EVRButtonId.k_EButton_ApplicationMenu, ref Frame.TouchpadIsDown );
+		
+		//	EVRControllerAxisType	{
+		//k_eControllerAxis_None = 0,
+		//k_eControllerAxis_TrackPad = 1,
+		//k_eControllerAxis_Joystick = 2,
+		//k_eControllerAxis_Trigger = 3,
+		Frame.TouchpadAxis = new Vector2( State.rAxis1.x, State.rAxis1.y );
+
+		Frame.CalculateDiff(LastFrame);
 
 		return Frame;
 	}
@@ -170,21 +215,23 @@ public class OpenvrControllerManager : MonoBehaviour {
 		{
 			var State = new VRControllerState_t();
 			var Pose = new TrackedDevicePose_t();
-			
+			OpenvrControllerFrame LastFrame = null;
+			try
+			{
+				LastFrame = LastFrames[Frames.Count];
+			}
+			catch { }
+
 			var Attached = (sys!=null) ? sys.GetControllerStateWithPose( TrackingOrigin, i, ref State, ref Pose ) : false;
-			var Frame = Attached ? GetFrame( State, Pose ) : GetFrame(null,null);
+			var Frame = Attached ? GetFrame( State, Pose, LastFrame ) : GetFrame(null,null,LastFrame);
 			Frames.Add( Frame );
 
-			if ( Attached )
+			if ( Attached || LastFrame!=null )
 				ValidCount = (int)i+1;
 		}
 
-		//	only send max controllers we've ever had. so we can detect new ones.
-		PeakControllers = Mathf.Max( ValidCount, PeakControllers );
-		while ( Frames.Count > PeakControllers )
-			Frames.RemoveAt( Frames.Count-1 );
-
 		OnUpdateAll.Invoke( Frames );;
+		LastFrames = Frames;
 	}
 
 
