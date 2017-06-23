@@ -80,6 +80,9 @@ public class OpenvrControllerManager : MonoBehaviour {
 	List<OpenvrControllerFrame>					LastFrames;		
 	int											PeakControllers	{	get {	return LastFrames!=null ? LastFrames.Count : 0; }	}
 	CVRSystem									system = null;
+	public bool									UsePredictedPoses = true;
+	[Range(0,4)]
+	public float								PredictedPosePhotoDelay = 0;
 
 	//	from SteamVr
 	private static float _copysign(float sizeval, float signval)
@@ -199,7 +202,8 @@ public class OpenvrControllerManager : MonoBehaviour {
 		var Frames = new List<OpenvrControllerFrame>();
 		var ValidCount = 0;
 
-		
+		var PredictedPoses = new TrackedDevicePose_t[MaxDevices];
+		sys.GetDeviceToAbsoluteTrackingPose (TrackingOrigin, PredictedPosePhotoDelay, PredictedPoses);
 
 		var ControllerDeviceIndexes = new List<uint>();
 		for ( uint i=0;	i<MaxDevices;	i++ )
@@ -214,6 +218,7 @@ public class OpenvrControllerManager : MonoBehaviour {
 		foreach ( var i in ControllerDeviceIndexes )
 		{
 			var State = new VRControllerState_t();
+			var StateSize = (uint)Marshal.SizeOf (State);
 			var Pose = new TrackedDevicePose_t();
 			OpenvrControllerFrame LastFrame = null;
 			try
@@ -222,7 +227,11 @@ public class OpenvrControllerManager : MonoBehaviour {
 			}
 			catch { }
 
-			var Attached = (sys!=null) ? sys.GetControllerStateWithPose( TrackingOrigin, i, ref State, ref Pose ) : false;
+			var Attached = sys.GetControllerStateWithPose( TrackingOrigin, i, ref State, StateSize, ref Pose );
+
+			if (UsePredictedPoses)
+				Pose = PredictedPoses [i];
+
 			var Frame = Attached ? GetFrame( State, Pose, LastFrame ) : GetFrame(null,null,LastFrame);
 			Frames.Add( Frame );
 
