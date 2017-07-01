@@ -140,7 +140,8 @@ public class OpenvrControllerManager : MonoBehaviour {
 
 	static void SetButton(ulong State,EVRButtonId Button,ref bool Value)
 	{
-		var Down = State & (ulong)(1 << (int)Button);
+		var ButtonBit = (ulong)((ulong)1 << (int)Button);
+		var Down = State & ButtonBit;
 		Value = (Down!=0);
 	}
 
