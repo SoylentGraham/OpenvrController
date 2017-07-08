@@ -57,6 +57,8 @@ public class SetupCalibration : MonoBehaviour {
 	[Range(-45,45)]
 	public float		ControllerPitchTilt = 0;
 
+	[Header("Todo: move these things to client side, not here")]
+	public bool			TargetIsCanvas = false;
 
 	void SaveCalibration()
 	{
@@ -121,9 +123,20 @@ public class SetupCalibration : MonoBehaviour {
 				var Hit = new RaycastHit();
 				if ( mc.Raycast( Ray, out Hit, 1000.0f ) )
 				{
-					var Viewport3 = new Vector3( Hit.textureCoord.x, 1-Hit.textureCoord.y, 0 );
-					var Screen3 = ScreenCamera.ViewportToWorldPoint( Viewport3 );
-					Player.ScreenPosition = new Vector2( Screen3.x, Screen3.y );
+					if (TargetIsCanvas) {
+						var Viewport3 = new Vector3 (Hit.textureCoord.x, Hit.textureCoord.y, -ScreenCamera.transform.position.z);
+						var Screen3 = ScreenCamera.ViewportToWorldPoint (Viewport3);
+						Debug.Log (Screen3);
+						//Screen3.x /= Screen3.z;
+						//Screen3.y /= Screen3.z;
+						Player.ScreenPosition = new Vector2 (Screen3.x, Screen3.y);
+					} else {
+						//	gr: flip for world, not for canvas
+						var Viewport3 = new Vector3 (Hit.textureCoord.x, 1 - Hit.textureCoord.y, 0);
+						var Screen3 = ScreenCamera.ViewportToWorldPoint (Viewport3);
+
+						Player.ScreenPosition = new Vector2 (Screen3.x, Screen3.y);
+					}
 				}
 				PlayerControllers.Add(Player);
 			}
