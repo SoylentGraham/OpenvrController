@@ -48,7 +48,7 @@
 				float4 Position : SV_POSITION;
 			};
 
-			#include "../PopUnityCommon/Spline.cginc"
+			#include "../../PopUnityCommon/Spline.cginc"
 
 
 		

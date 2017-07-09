@@ -3,10 +3,10 @@
 	Properties
 	{
 		_MainTex ("Texture", 2D) = "white" {}
+
 		GridSize("GridSize", Range(1,30) ) = 10
 		TimeSpeed("TimeSpeed", Range(0,10.0) ) = 0.5
 		TimeOffset("TimeOffset", Range(0,1) ) = 0
-		ColourA("ColourA", COLOR ) = (0,0,0,1)
 		ColourB("ColourB", COLOR ) = (1,1,1,1)
 		RingSize("RingSize", Range(0,1) ) = 0.5
 		ClipRadius("ClipRadius", Range(0.01,1) ) = 0.6
@@ -30,6 +30,7 @@
 			struct appdata
 			{
 				float4 vertex : POSITION;
+				float4 SpriteColour : COLOR;
 				float2 uv : TEXCOORD0;
 			};
 
@@ -37,6 +38,7 @@
 			{
 				float4 uv : TEXCOORD0;
 				float4 vertex : SV_POSITION;
+				float4 SpriteColour : COLOR;
 			};
 
 			sampler2D _MainTex;
@@ -46,7 +48,6 @@
 			float TimeSpeed;
 			float TimeOffset;
 
-			float4 ColourA;
 			float4 ColourB;
 			float RingSize;
 			float ClipRadius;
@@ -62,6 +63,7 @@
 					o.uv = float4( (v.uv*2)+1, 0, 1 );
 				//o.uv = TRANSFORM_TEX(v.uv, _MainTex);
 				//o.uv = v.vertex;
+				o.SpriteColour = v.SpriteColour;
 				return o;
 			}
 			
@@ -86,7 +88,7 @@
 				float Radius = length( GridUv ) + Time;
 
 				float Ring = fmod( Radius, RingSize ) / RingSize;
-				return ( Ring < 0.5f ) ? ColourA : ColourB;
+				return ( Ring < 0.5f ) ? i.SpriteColour : ColourB;
 			}
 			ENDCG
 		}
