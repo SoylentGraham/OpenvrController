@@ -31,7 +31,9 @@ public class SetupCalibration : MonoBehaviour {
 	public MeshFilter							ScreenQuad;
 	public UnityEngine.Events.UnityEvent		OnFinished;
 	public UnityEvent_PlayerControllerFrames	OnPlayerUpdate;
-	public Camera								ScreenCamera;
+
+	//	gr: later we might want the screen seperate for 2D confiration in a 3D game
+	Camera										ScreenCamera {	get {	return Camera.main;	}	}
 
 	public RectTransformUV						CalibrationTarget;
 	public Canvas								CalibrationCanvas;
