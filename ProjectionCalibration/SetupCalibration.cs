@@ -126,7 +126,7 @@ public class SetupCalibration : MonoBehaviour {
 					if (TargetIsCanvas) {
 						var Viewport3 = new Vector3 (Hit.textureCoord.x, Hit.textureCoord.y, -ScreenCamera.transform.position.z);
 						var Screen3 = ScreenCamera.ViewportToWorldPoint (Viewport3);
-						Debug.Log (Screen3);
+						//Debug.Log (Screen3);
 						//Screen3.x /= Screen3.z;
 						//Screen3.y /= Screen3.z;
 						Player.ScreenPosition = new Vector2 (Screen3.x, Screen3.y);

@@ -169,13 +169,16 @@ public class OpenvrControllerManager : MonoBehaviour {
 		SetButton( State.ulButtonPressed, EVRButtonId.k_EButton_SteamVR_Trigger, ref Frame.TriggerIsDown );
 
 		SetButton( State.ulButtonTouched, EVRButtonId.k_EButton_ApplicationMenu, ref Frame.TouchpadIsDown );
-		
+
+		//	gr: this is what the docs say, but... touchpad seems to be 0
+		//		I guess it's k_eControllerAxis_ -1
 		//	EVRControllerAxisType	{
 		//k_eControllerAxis_None = 0,
 		//k_eControllerAxis_TrackPad = 1,
 		//k_eControllerAxis_Joystick = 2,
 		//k_eControllerAxis_Trigger = 3,
-		Frame.TouchpadAxis = new Vector2( State.rAxis1.x, State.rAxis1.y );
+
+		Frame.TouchpadAxis = new Vector2( State.rAxis0.x, -State.rAxis0.y );
 
 		Frame.CalculateDiff(LastFrame);
 
