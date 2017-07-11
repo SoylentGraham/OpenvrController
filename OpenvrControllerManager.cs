@@ -20,6 +20,7 @@ public class OpenvrControllerFrame
 	public bool			TriggerIsDown;
 	public bool			TriggerPressed;
 	public bool			TriggerReleased;
+	public float		TriggerAxis;
 
 	public Vector2		TouchpadAxis;
 
@@ -179,6 +180,7 @@ public class OpenvrControllerManager : MonoBehaviour {
 		//k_eControllerAxis_Trigger = 3,
 
 		Frame.TouchpadAxis = new Vector2( State.rAxis0.x, -State.rAxis0.y );
+		Frame.TriggerAxis = State.rAxis1.x;
 
 		Frame.CalculateDiff(LastFrame);
 
