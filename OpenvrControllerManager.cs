@@ -67,8 +67,28 @@ public class OpenvrControllerFrame
 
 }
 
+
+
+[System.Serializable]
+public class OpenvrLighthouseFrame
+{
+	public bool			Attached;
+	public bool			Tracking;
+
+	public Vector3		Position;
+	public Quaternion	Rotation;
+
+	public bool IsKeyFrame()
+	{
+		return false;
+	}
+}
+
 [System.Serializable]
 public class UnityEvent_OpenvrControllerFrames : UnityEvent <List<OpenvrControllerFrame>> {}
+
+[System.Serializable]
+public class UnityEvent_OpenvrLighthouseFrame : UnityEvent <List<OpenvrLighthouseFrame>> {}
 
 
 
@@ -77,9 +97,10 @@ public class UnityEvent_OpenvrControllerFrames : UnityEvent <List<OpenvrControll
 public class OpenvrControllerManager : MonoBehaviour {
 
 	public UnityEvent_OpenvrControllerFrames	OnUpdateAll;
+	public UnityEvent_OpenvrLighthouseFrame		OnUpdateLighthouses;
 	public ETrackingUniverseOrigin				TrackingOrigin = ETrackingUniverseOrigin.TrackingUniverseStanding;
-	List<OpenvrControllerFrame>					LastFrames;		
-	int											PeakControllers	{	get {	return LastFrames!=null ? LastFrames.Count : 0; }	}
+	List<OpenvrControllerFrame>					LastControllerFrames;		
+	int											PeakControllers	{	get {	return LastControllerFrames!=null ? LastControllerFrames.Count : 0; }	}
 	CVRSystem									system = null;
 	public bool									UsePredictedPoses = true;
 	[Range(0,4)]
@@ -187,6 +208,26 @@ public class OpenvrControllerManager : MonoBehaviour {
 		return Frame;
 	}
 
+	OpenvrLighthouseFrame GetLighthouseFrame(TrackedDevicePose_t? pPose)
+	{
+		var Frame = new OpenvrLighthouseFrame();
+
+		if ( !pPose.HasValue )
+		{
+			//	if last frame is valid, get a "all-released" frame diff before we return null
+			Frame.Attached = false;
+			return Frame;
+		}
+
+		var Pose = pPose.Value;
+
+		Frame.Attached = true;
+		Frame.Tracking = Pose.bPoseIsValid;
+		RigidTransform( Pose.mDeviceToAbsoluteTracking, ref Frame.Position, ref Frame.Rotation );
+
+
+		return Frame;
+	}
 
 
 	void Update()
@@ -205,20 +246,23 @@ public class OpenvrControllerManager : MonoBehaviour {
 
 		var MaxDevices = 16;	//	find const in API
 
-		var Frames = new List<OpenvrControllerFrame>();
+		var ControllerFrames = new List<OpenvrControllerFrame>();
+		var LighthouseFrames = new List<OpenvrLighthouseFrame>();
 		var ValidCount = 0;
 
 		var PredictedPoses = new TrackedDevicePose_t[MaxDevices];
 		sys.GetDeviceToAbsoluteTrackingPose (TrackingOrigin, PredictedPosePhotoDelay, PredictedPoses);
 
 		var ControllerDeviceIndexes = new List<uint>();
+		var LighthouseDeviceIndexes = new List<uint>();
 		for ( uint i=0;	i<MaxDevices;	i++ )
 		{
 			var Type = (sys!=null) ? sys.GetTrackedDeviceClass( i ) : ETrackedDeviceClass.Invalid;
-			if ( Type != ETrackedDeviceClass.Controller )
-				continue;
-
-			ControllerDeviceIndexes.Add(i);
+			if (Type == ETrackedDeviceClass.Controller) {
+				ControllerDeviceIndexes.Add (i);
+			} else if (Type == ETrackedDeviceClass.TrackingReference) {
+				LighthouseDeviceIndexes.Add (i);
+			}
 		}
 
 		foreach ( var i in ControllerDeviceIndexes )
@@ -229,7 +273,7 @@ public class OpenvrControllerManager : MonoBehaviour {
 			OpenvrControllerFrame LastFrame = null;
 			try
 			{
-				LastFrame = LastFrames[Frames.Count];
+				LastFrame = LastControllerFrames[ControllerFrames.Count];
 			}
 			catch { }
 
@@ -239,14 +283,29 @@ public class OpenvrControllerManager : MonoBehaviour {
 				Pose = PredictedPoses [i];
 
 			var Frame = Attached ? GetFrame( State, Pose, LastFrame ) : GetFrame(null,null,LastFrame);
-			Frames.Add( Frame );
+			ControllerFrames.Add( Frame );
 
 			if ( Attached || LastFrame!=null )
 				ValidCount = (int)i+1;
 		}
 
-		OnUpdateAll.Invoke( Frames );;
-		LastFrames = Frames;
+		foreach ( var i in LighthouseDeviceIndexes )
+		{
+			var State = new VRControllerState_t();
+			var StateSize = (uint)Marshal.SizeOf (State);
+			TrackedDevicePose_t Pose = new TrackedDevicePose_t ();
+			Pose.bPoseIsValid = false;
+
+			if (UsePredictedPoses)
+				Pose = PredictedPoses [i];
+
+			var Frame = GetLighthouseFrame (Pose);
+			LighthouseFrames.Add( Frame );
+		}
+
+		OnUpdateAll.Invoke( ControllerFrames );
+		OnUpdateLighthouses.Invoke( LighthouseFrames );
+		LastControllerFrames = ControllerFrames;
 	}
 
 
