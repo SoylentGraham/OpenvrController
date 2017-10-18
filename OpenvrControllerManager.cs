@@ -106,6 +106,8 @@ public class OpenvrControllerManager : MonoBehaviour {
 	[Range(0,4)]
 	public float								PredictedPosePhotoDelay = 0;
 
+	public bool									DebugState = false;
+
 	//	from SteamVr
 	private static float _copysign(float sizeval, float signval)
 	{
@@ -263,6 +265,10 @@ public class OpenvrControllerManager : MonoBehaviour {
 			} else if (Type == ETrackedDeviceClass.TrackingReference) {
 				LighthouseDeviceIndexes.Add (i);
 			}
+		}
+
+		if (DebugState) {
+			Debug.Log ("Found " + ControllerDeviceIndexes.Count + " controllers and " + LighthouseDeviceIndexes.Count + " lighthouses");
 		}
 
 		foreach ( var i in ControllerDeviceIndexes )
