@@ -96,6 +96,8 @@ public class UnityEvent_OpenvrLighthouseFrame : UnityEvent <List<OpenvrLighthous
 [ExecuteInEditMode]
 public class OpenvrControllerManager : MonoBehaviour {
 
+	public bool									UpdateInEditor = false;
+
 	public UnityEvent_OpenvrControllerFrames	OnUpdateAll;
 	public UnityEvent_OpenvrLighthouseFrame		OnUpdateLighthouses;
 	public ETrackingUniverseOrigin				TrackingOrigin = ETrackingUniverseOrigin.TrackingUniverseStanding;
@@ -234,6 +236,9 @@ public class OpenvrControllerManager : MonoBehaviour {
 
 	void Update()
 	{
+		if (!UpdateInEditor && Application.isEditor && !Application.isPlaying)
+			return;
+
 		if ( system == null )
 		{
 			EVRInitError Error = EVRInitError.None;
