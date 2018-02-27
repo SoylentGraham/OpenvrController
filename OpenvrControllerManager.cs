@@ -233,6 +233,15 @@ public class OpenvrControllerManager : MonoBehaviour {
 		return Frame;
 	}
 
+	void Start()
+	{
+		var ControllerTrackers = UpdateCalibrationShader.FindObjectsOfTypeIncludingDisabled<ControllerTracker>();
+		foreach ( var c in ControllerTrackers )
+		{
+			OnUpdateAll.AddListener(c.UpdatePosition);
+		}
+	}
+ 
 
 	void Update()
 	{
