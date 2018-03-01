@@ -110,6 +110,9 @@ public class OpenvrControllerManager : MonoBehaviour {
 
 	public bool									DebugState = false;
 
+	//	we allow frame injection from external sources via callbacks, which can modify what we send out
+	public UnityEvent_OpenvrControllerFrames	OnPreUpdateAll;
+
 	//	from SteamVr
 	private static float _copysign(float sizeval, float signval)
 	{
@@ -323,6 +326,7 @@ public class OpenvrControllerManager : MonoBehaviour {
 			LighthouseFrames.Add( Frame );
 		}
 
+		OnPreUpdateAll.Invoke( ControllerFrames );
 		OnUpdateAll.Invoke( ControllerFrames );
 		OnUpdateLighthouses.Invoke( LighthouseFrames );
 		LastControllerFrames = ControllerFrames;
