@@ -113,6 +113,12 @@ public class OpenvrControllerManager : MonoBehaviour {
 	//	we allow frame injection from external sources via callbacks, which can modify what we send out
 	public UnityEvent_OpenvrControllerFrames	OnPreUpdateAll;
 
+	[Header("Certain errors cause unity/app to lock up when init fails. Add reconnect to IPC delay")]
+	public float ReInitialiseDelaySecs = 5;
+	float? LastInitTime = null;
+	float TimeSinceLastInit	{ get { return LastInitTime.HasValue ? Time.time - LastInitTime.Value : 999; }}
+	bool CanTryReinit { get { return LastInitTime.HasValue ? TimeSinceLastInit > ReInitialiseDelaySecs : true; } }
+
 	//	from SteamVr
 	private static float _copysign(float sizeval, float signval)
 	{
@@ -253,8 +259,13 @@ public class OpenvrControllerManager : MonoBehaviour {
 
 		if ( system == null )
 		{
+			//	delayed re-init
+			if ( !CanTryReinit )
+				return;
+
 			EVRInitError Error = EVRInitError.None;
 			system = OpenVR.Init( ref Error, EVRApplicationType.VRApplication_Other );
+			LastInitTime = Time.time;
 			if ( system == null )
 			{
 				Debug.LogError("No vr system: " + Error );
