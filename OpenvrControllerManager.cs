@@ -288,7 +288,7 @@ public class OpenvrControllerManager : MonoBehaviour {
 		for ( uint i=0;	i<MaxDevices;	i++ )
 		{
 			var Type = (sys!=null) ? sys.GetTrackedDeviceClass( i ) : ETrackedDeviceClass.Invalid;
-			if (Type == ETrackedDeviceClass.Controller) {
+			if (Type == ETrackedDeviceClass.Controller || Type == ETrackedDeviceClass.GenericTracker) {
 				ControllerDeviceIndexes.Add (i);
 			} else if (Type == ETrackedDeviceClass.TrackingReference) {
 				LighthouseDeviceIndexes.Add (i);
