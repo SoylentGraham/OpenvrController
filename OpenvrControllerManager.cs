@@ -119,6 +119,12 @@ public class OpenvrControllerManager : MonoBehaviour {
 
 	public bool									DebugState = false;
 
+	[Range(0.01f, 1.0f)]
+	public float								GizmoSize = 0.1f;
+	public Color								GizmoTrackingColour = Color.green;
+	public Color								GizmoAttachedColour = Color.yellow;
+	public Color								GizmoLostColour = Color.red;
+
 	//	we allow frame injection from external sources via callbacks, which can modify what we send out
 	public UnityEvent_OpenvrControllerFrames	OnPreUpdateAll;
 
@@ -229,6 +235,13 @@ public class OpenvrControllerManager : MonoBehaviour {
 		Frame.Attached = true;
 		Frame.Tracking = Pose.bPoseIsValid;
 		RigidTransform( Pose.mDeviceToAbsoluteTracking, ref Frame.Position, ref Frame.Rotation );
+
+		//	if we're not tracking, use position & rotation from last frame
+		if ( !Frame.Tracking && LastFrame != null )
+		{
+			Frame.Position = LastFrame.Position;
+			Frame.Rotation = LastFrame.Rotation;
+		}
 
 		SetButton( State.ulButtonPressed, EVRButtonId.k_EButton_ApplicationMenu, ref Frame.AppButtonIsDown );
 		SetButton( State.ulButtonPressed, EVRButtonId.k_EButton_Grip, ref Frame.GripButtonIsDown );
@@ -376,5 +389,45 @@ public class OpenvrControllerManager : MonoBehaviour {
 		LastControllerFrames = ControllerFrames;
 	}
 
+
+	void OnDrawGizmos()
+	{
+		if (LastControllerFrames == null)
+			return;
+
+		var ParentMatrix = this.transform.localToWorldMatrix;
+
+		foreach (var Frame in LastControllerFrames)
+		{
+			if (Frame == null)
+				continue;
+
+			try
+			{
+				//	catch invalid quaternions :/
+				//	annoyingly even if we turn assertions into exceptions, we still get the message printed out and clogs up the console.
+				//UnityEngine.Assertions.Assert.raiseExceptions = true;
+				var Rotation = Frame.Rotation;
+				var Rot4 = new Vector4(Rotation.x, Rotation.y, Rotation.z, Rotation.w);
+
+				if (Rot4.sqrMagnitude < float.Epsilon )
+					Rotation = Quaternion.identity;
+				
+				var Mtx = ParentMatrix * Matrix4x4.TRS(Frame.Position, Rotation, Vector3.one);
+				Gizmos.matrix = Mtx;
+
+				if (Frame.Tracking)
+					Gizmos.color = GizmoTrackingColour;
+				else if (Frame.Attached)
+					Gizmos.color = GizmoAttachedColour;
+				else
+					Gizmos.color = GizmoLostColour;
+
+				Gizmos.DrawCube(Vector3.zero, new Vector3(GizmoSize, GizmoSize, GizmoSize));
+			}
+			catch{}
+		}
+
+	}
 
 }
