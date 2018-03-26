@@ -380,8 +380,8 @@ public class OpenvrControllerManager : MonoBehaviour {
 
 		foreach ( var i in LighthouseDeviceIndexes )
 		{
-			var State = new VRControllerState_t();
-			var StateSize = (uint)Marshal.SizeOf (State);
+			//var State = new VRControllerState_t();
+			//var StateSize = (uint)Marshal.SizeOf (State);
 			TrackedDevicePose_t Pose = new TrackedDevicePose_t ();
 			Pose.bPoseIsValid = false;
 
