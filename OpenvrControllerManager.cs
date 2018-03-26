@@ -11,8 +11,17 @@ using Valve.VR;							//	openvr
 [System.Serializable]
 public class OpenvrControllerFrame
 {
+	//	todo: move lighthouse into here
+	public enum DeviceType
+	{
+		Controller,
+		Tracker,
+		Unknown,
+	}
+	
 	public bool			Attached;
 	public bool			Tracking;
+	public DeviceType	ControllerType;
 
 	public Vector3		Position;
 	public Quaternion	Rotation;
@@ -180,7 +189,23 @@ public class OpenvrControllerManager : MonoBehaviour {
 		Value = (Down!=0);
 	}
 
-	OpenvrControllerFrame GetFrame(VRControllerState_t? pState,TrackedDevicePose_t? pPose,OpenvrControllerFrame LastFrame)
+	OpenvrControllerFrame.DeviceType GetDeviceType(ETrackedDeviceClass Type)
+	{
+		switch ( Type )
+		{
+			case ETrackedDeviceClass.Controller:
+				return OpenvrControllerFrame.DeviceType.Controller;
+
+			case ETrackedDeviceClass.GenericTracker:
+				return OpenvrControllerFrame.DeviceType.Tracker;
+		
+			default:
+				throw new System.Exception("Unhandled device class " + Type);
+		}
+		
+	}
+
+	OpenvrControllerFrame GetFrame(VRControllerState_t? pState,TrackedDevicePose_t? pPose,ETrackedDeviceClass? DevType,OpenvrControllerFrame LastFrame)
 	{
 		var Frame = new OpenvrControllerFrame();
 
@@ -193,6 +218,13 @@ public class OpenvrControllerManager : MonoBehaviour {
 
 		var State = pState.Value;
 		var Pose = pPose.Value;
+
+		if (DevType.HasValue)
+			Frame.ControllerType = GetDeviceType(DevType.Value);
+		else if (LastFrame != null)
+			Frame.ControllerType = LastFrame.ControllerType;
+		else
+			Frame.ControllerType = OpenvrControllerFrame.DeviceType.Unknown;
 
 		Frame.Attached = true;
 		Frame.Tracking = Pose.bPoseIsValid;
@@ -288,7 +320,7 @@ public class OpenvrControllerManager : MonoBehaviour {
 		for ( uint i=0;	i<MaxDevices;	i++ )
 		{
 			var Type = (sys!=null) ? sys.GetTrackedDeviceClass( i ) : ETrackedDeviceClass.Invalid;
-			if (Type == ETrackedDeviceClass.Controller) {
+			if (Type == ETrackedDeviceClass.Controller || Type == ETrackedDeviceClass.GenericTracker) {
 				ControllerDeviceIndexes.Add (i);
 			} else if (Type == ETrackedDeviceClass.TrackingReference) {
 				LighthouseDeviceIndexes.Add (i);
@@ -312,11 +344,12 @@ public class OpenvrControllerManager : MonoBehaviour {
 			catch { }
 
 			var Attached = sys.GetControllerStateWithPose( TrackingOrigin, i, ref State, StateSize, ref Pose );
+			var DevType = sys.GetTrackedDeviceClass(i);
 
 			if (UsePredictedPoses)
 				Pose = PredictedPoses [i];
 
-			var Frame = Attached ? GetFrame( State, Pose, LastFrame ) : GetFrame(null,null,LastFrame);
+			var Frame = Attached ? GetFrame( State, Pose, DevType, LastFrame ) : GetFrame(null,null,null,LastFrame);
 			ControllerFrames.Add( Frame );
 
 			if ( Attached || LastFrame!=null )
