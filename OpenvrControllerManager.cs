@@ -107,6 +107,9 @@ public class OpenvrControllerManager : MonoBehaviour {
 
 	public bool									UpdateInEditor = false;
 
+	[Range(-4, 4)]
+	public float								VerticalOffset = 0;
+
 	public UnityEvent_OpenvrControllerFrames	OnUpdateAll;
 	public UnityEvent_OpenvrLighthouseFrame		OnUpdateLighthouses;
 	public ETrackingUniverseOrigin				TrackingOrigin = ETrackingUniverseOrigin.TrackingUniverseStanding;
@@ -235,6 +238,12 @@ public class OpenvrControllerManager : MonoBehaviour {
 		Frame.Attached = true;
 		Frame.Tracking = Pose.bPoseIsValid;
 		RigidTransform( Pose.mDeviceToAbsoluteTracking, ref Frame.Position, ref Frame.Rotation );
+
+		//	apply vertical offset
+		if ( Frame.Tracking )
+		{
+			Frame.Position.y += VerticalOffset;
+		}
 
 		//	if we're not tracking, use position & rotation from last frame
 		if ( !Frame.Tracking && LastFrame != null )
