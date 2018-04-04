@@ -106,6 +106,8 @@ public class UnityEvent_OpenvrLighthouseFrame : UnityEvent <List<OpenvrLighthous
 public class OpenvrControllerManager : MonoBehaviour {
 
 	public bool									UpdateInEditor = false;
+	[Header("Should really use the built in gizmo toggle :)")]
+	public bool									DrawGizmos = true;
 
 	[Range(-4, 4)]
 	public float								VerticalOffset = 0;
@@ -401,6 +403,9 @@ public class OpenvrControllerManager : MonoBehaviour {
 
 	void OnDrawGizmos()
 	{
+		if (!DrawGizmos)
+			return;
+			
 		if (LastControllerFrames == null)
 			return;
 
@@ -411,30 +416,18 @@ public class OpenvrControllerManager : MonoBehaviour {
 			if (Frame == null)
 				continue;
 
-			try
-			{
-				//	catch invalid quaternions :/
-				//	annoyingly even if we turn assertions into exceptions, we still get the message printed out and clogs up the console.
-				//UnityEngine.Assertions.Assert.raiseExceptions = true;
-				var Rotation = Frame.Rotation;
-				var Rot4 = new Vector4(Rotation.x, Rotation.y, Rotation.z, Rotation.w);
+			var Rotation = PopX.Math.GetSafeRotation(Frame.Rotation);
+			var Mtx = ParentMatrix * Matrix4x4.TRS(Frame.Position, Rotation, Vector3.one);
+			Gizmos.matrix = Mtx;
 
-				if (Rot4.sqrMagnitude < float.Epsilon )
-					Rotation = Quaternion.identity;
-				
-				var Mtx = ParentMatrix * Matrix4x4.TRS(Frame.Position, Rotation, Vector3.one);
-				Gizmos.matrix = Mtx;
+			if (Frame.Tracking)
+				Gizmos.color = GizmoTrackingColour;
+			else if (Frame.Attached)
+				Gizmos.color = GizmoAttachedColour;
+			else
+				Gizmos.color = GizmoLostColour;
 
-				if (Frame.Tracking)
-					Gizmos.color = GizmoTrackingColour;
-				else if (Frame.Attached)
-					Gizmos.color = GizmoAttachedColour;
-				else
-					Gizmos.color = GizmoLostColour;
-
-				Gizmos.DrawCube(Vector3.zero, new Vector3(GizmoSize, GizmoSize, GizmoSize));
-			}
-			catch{}
+			Gizmos.DrawCube(Vector3.zero, new Vector3(GizmoSize, GizmoSize, GizmoSize));
 		}
 
 	}
